@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance History & Reports – Voice Attendance System</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-microphone-lines"></i>
+        </div>
+        <div>Vox<span class="accent">Attend</span> <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-dim); text-transform: uppercase; margin-left: 4px;">Reports</span></div>
+      </a>
+      
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link"><i class="fa-solid fa-microphone"></i> Mark Voice</a></li>
+        <li><a href="/dashboard" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="/students" class="nav-link"><i class="fa-solid fa-users"></i> Students</a></li>
+        <li><a href="/attendance" class="nav-link active"><i class="fa-solid fa-clock-rotate-left"></i> History & Export</a></li>
+      </ul>
+
+      <div class="nav-meta">
+        <div class="live-clock" id="liveClock">
+          <span class="live-dot"></span> Synchronizing...
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- Header & Export Action Buttons -->
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+      <div>
+        <h1 style="font-size: 2.2rem;">Attendance Records & Reports</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Filter historical records and generate institutional compliance reports</p>
+      </div>
+
+      <!-- Export Buttons -->
+      <div class="export-group">
+        <span style="font-size: 0.84rem; color: var(--text-muted); font-weight: 600; margin-right: 0.25rem;">Export:</span>
+        <button class="btn-export csv" onclick="triggerExport('csv')" title="Export to CSV">
+          <i class="fa-solid fa-file-csv" style="color: #60a5fa;"></i> CSV
+        </button>
+        <button class="btn-export excel" onclick="triggerExport('excel')" title="Export to Excel Spreadsheet">
+          <i class="fa-solid fa-file-excel" style="color: #34d399;"></i> Excel (.xlsx)
+        </button>
+        <button class="btn-export pdf" onclick="triggerExport('pdf')" title="Export to Printable PDF">
+          <i class="fa-solid fa-file-pdf" style="color: #f87171;"></i> PDF Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Multi-Criteria Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <!-- Date Filter -->
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.2rem; font-weight: 600;">Date</label>
+          <input type="date" id="filterDate" class="input-control">
+        </div>
+
+        <!-- Student Query Filter -->
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.2rem; font-weight: 600;">Search Student</label>
+          <input type="text" id="filterQuery" class="input-control" placeholder="Name or Reg Number...">
+        </div>
+
+        <!-- Department Filter -->
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.2rem; font-weight: 600;">Department</label>
+          <select id="filterDept" class="select-control">
+            <option value="ALL">All Departments</option>
+            <option value="CSE">CSE</option>
+            <option value="ECE">ECE</option>
+            <option value="IT">IT</option>
+            <option value="MECH">MECH</option>
+            <option value="CIVIL">CIVIL</option>
+          </select>
+        </div>
+
+        <!-- Section Filter -->
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.2rem; font-weight: 600;">Section</label>
+          <select id="filterSec" class="select-control">
+            <option value="ALL">All Sections</option>
+            <option value="A">Section A</option>
+            <option value="B">Section B</option>
+            <option value="C">Section C</option>
+          </select>
+        </div>
+
+        <!-- Reset Button -->
+        <div style="align-self: flex-end;">
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('filterDate').value=''; document.getElementById('filterQuery').value=''; document.getElementById('filterDept').value='ALL'; document.getElementById('filterSec').value='ALL'; loadAttendanceHistory();">
+            <i class="fa-solid fa-arrow-rotate-left"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);" id="recordsCountBadge">
+          Loading...
+        </span>
+      </div>
+    </div>
+
+    <!-- Attendance Records Table -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>Register No</th>
+              <th>Student Name</th>
+              <th>Department</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Recognized Speech</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceTableBody">
+            <tr>
+              <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2.5rem;">
+                Fetching attendance records...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Alerts Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <b>VoxAttend Attendance History</b> • Automatic Speech Recognition (ASR)
+      </div>
+      <div>
+        College Submission Ready • Faster-Whisper + Flask + SQLite
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

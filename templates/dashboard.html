@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard – Voice Attendance System</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-microphone-lines"></i>
+        </div>
+        <div>Vox<span class="accent">Attend</span> <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-dim); text-transform: uppercase; margin-left: 4px;">Dashboard</span></div>
+      </a>
+      
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link"><i class="fa-solid fa-microphone"></i> Mark Voice</a></li>
+        <li><a href="/dashboard" class="nav-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="/students" class="nav-link"><i class="fa-solid fa-users"></i> Students</a></li>
+        <li><a href="/attendance" class="nav-link"><i class="fa-solid fa-clock-rotate-left"></i> History & Export</a></li>
+      </ul>
+
+      <div class="nav-meta">
+        <div class="live-clock" id="liveClock">
+          <span class="live-dot"></span> Synchronizing...
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper" id="dashboardOverviewCard">
+
+    <!-- Dashboard Header & Date Filter -->
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+      <div>
+        <h1 style="font-size: 2.2rem;">Attendance Overview</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Real-time analytics and student participation rates</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <label for="dashboardDatePicker" style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600;">Date:</label>
+        <input type="date" id="dashboardDatePicker" class="input-control" style="cursor: pointer;">
+        <button class="btn btn-outline btn-sm" onclick="loadDashboardStats(document.getElementById('dashboardDatePicker').value)">
+          <i class="fa-solid fa-rotate"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 KPI Stat Cards -->
+    <div class="grid-4" style="margin-bottom: 2rem;">
+      <!-- Total Students -->
+      <div class="card stat-card blue">
+        <div class="stat-info">
+          <span class="stat-label">Total Enrolled</span>
+          <span class="stat-value" id="statTotalStudents">0</span>
+          <span class="stat-desc">Registered candidates</span>
+        </div>
+        <div class="stat-icon">
+          <i class="fa-solid fa-user-group"></i>
+        </div>
+      </div>
+
+      <!-- Present Today -->
+      <div class="card stat-card green">
+        <div class="stat-info">
+          <span class="stat-label">Present</span>
+          <span class="stat-value" id="statPresentToday" style="color: #34d399;">0</span>
+          <span class="stat-desc">Verified by voice today</span>
+        </div>
+        <div class="stat-icon">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+      </div>
+
+      <!-- Absent Today -->
+      <div class="card stat-card yellow">
+        <div class="stat-info">
+          <span class="stat-label">Absent</span>
+          <span class="stat-value" id="statAbsentToday" style="color: #f87171;">0</span>
+          <span class="stat-desc">Unrecorded attendance</span>
+        </div>
+        <div class="stat-icon">
+          <i class="fa-solid fa-circle-xmark"></i>
+        </div>
+      </div>
+
+      <!-- Attendance Percentage -->
+      <div class="card stat-card purple">
+        <div class="stat-info">
+          <span class="stat-label">Attendance Rate</span>
+          <span class="stat-value" id="statAttendancePct" style="color: #c084fc;">0%</span>
+          <span class="stat-desc">Overall compliance</span>
+        </div>
+        <div class="stat-icon">
+          <i class="fa-solid fa-percent"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Charts Section -->
+    <div class="grid-3" style="margin-bottom: 2rem;">
+      <!-- Chart 1: Doughnut Attendance Ratio -->
+      <div class="card">
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.15rem;">Attendance Ratio</h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Present vs Absent distribution</p>
+        <div style="position: relative; height: 230px;">
+          <canvas id="attendanceDoughnut"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Department-wise Bar Chart -->
+      <div class="card" style="grid-column: span 2;">
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.15rem;">Department Attendance Breakdown</h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Present students per department</p>
+        <div style="position: relative; height: 230px;">
+          <canvas id="deptBarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7-Day Trend Chart -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <h3 style="margin-bottom: 0.5rem; font-size: 1.15rem;">7-Day Attendance Trend</h3>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Total daily check-ins over recent days</p>
+      <div style="position: relative; height: 200px;">
+        <canvas id="trendLineChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Recent Today's Attendance Table -->
+    <div class="card">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+        <div>
+          <h2>Today's Verified Records</h2>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">Timestamped entries recorded via ASR</p>
+        </div>
+        <a href="/attendance" class="btn btn-outline btn-sm">
+          Full Records & Export <i class="fa-solid fa-arrow-right" style="margin-left: 0.35rem;"></i>
+        </a>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">#</th>
+              <th>Register No</th>
+              <th>Student Name</th>
+              <th>Department</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="dashboardRecentTableBody">
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">
+                Loading records...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Alerts Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <b>VoxAttend Admin Dashboard</b> • Automatic Speech Recognition (ASR)
+      </div>
+      <div>
+        College Submission Ready • Faster-Whisper + Flask + SQLite
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

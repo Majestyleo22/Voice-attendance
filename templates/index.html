@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Attendance System – ASR Automatic Speech Recognition</title>
+  <meta name="description" content="College Voice Attendance System using Faster-Whisper Automatic Speech Recognition (ASR). Mark attendance by speaking your name or register number.">
+  
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-microphone-lines"></i>
+        </div>
+        <div>Vox<span class="accent">Attend</span> <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-dim); text-transform: uppercase; margin-left: 4px;">ASR Core</span></div>
+      </a>
+      
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link active"><i class="fa-solid fa-microphone"></i> Mark Voice</a></li>
+        <li><a href="/dashboard" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="/students" class="nav-link"><i class="fa-solid fa-users"></i> Students</a></li>
+        <li><a href="/attendance" class="nav-link"><i class="fa-solid fa-clock-rotate-left"></i> History & Export</a></li>
+      </ul>
+
+      <div class="nav-meta">
+        <div class="live-clock" id="liveClock">
+          <span class="live-dot"></span> Synchronizing...
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+    
+    <!-- Hero Voice Section -->
+    <section class="voice-hero">
+      <div class="badge-engine">
+        <i class="fa-solid fa-microchip"></i> Powered by Faster-Whisper ASR Engine
+      </div>
+      
+      <h1 class="hero-title">Voice Attendance System</h1>
+      <p class="hero-subtitle">
+        Speak your registered student name or roll number clearly into the microphone to record your daily attendance.
+      </p>
+
+      <!-- Interactive Microphone Hub -->
+      <div class="mic-hub">
+        <div class="mic-rings-wrapper">
+          <div class="mic-ring ring-1"></div>
+          <div class="mic-ring ring-2"></div>
+          <div class="mic-ring ring-3"></div>
+          
+          <button id="micBtn" class="mic-btn" title="Click to Speak" aria-label="Mark Attendance by Voice">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+
+        <!-- Real-Time Waveform Canvas -->
+        <div class="waveform-container">
+          <canvas id="waveCanvas" width="320" height="48"></canvas>
+        </div>
+
+        <!-- Dynamic Status Prompt -->
+        <div class="voice-prompt-box" id="voicePromptBox">
+          <span class="prompt-icon"><i class="fa-solid fa-volume-high"></i></span>
+          <span id="promptText">Click the microphone & speak: <b>"My register number is 123"</b></span>
+        </div>
+      </div>
+
+      <!-- Live Speech Transcription Output -->
+      <div class="transcription-card">
+        <div class="transcription-header">
+          <span><i class="fa-solid fa-ear-listen"></i> Recognized Speech (ASR Output)</span>
+          <span style="color: #60a5fa;"><i class="fa-solid fa-bolt"></i> Real-Time</span>
+        </div>
+        <div class="transcription-text" id="recognizedSpeechText">— Waiting for voice input —</div>
+      </div>
+
+      <!-- Result Card (Success, Duplicate, Error) -->
+      <div id="resultBox" class="result-box"></div>
+
+      <!-- Quick Test & Accessibility Simulator Accordion -->
+      <div class="sim-accordion">
+        <button class="sim-toggle" onclick="document.getElementById('simContent').classList.toggle('open')">
+          <span><i class="fa-solid fa-flask-vial"></i> Simulated Voice Testing (No Mic Required)</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div class="sim-content" id="simContent">
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Click any phrase below or type directly to test the text normalizer, ASR matching pipeline, and duplicate prevention:
+          </p>
+          <div class="quick-tags">
+            <button class="quick-tag-btn" onclick="sendSimulatedText('my register number is one two three')">
+              "my register number is one two three"
+            </button>
+            <button class="quick-tag-btn" onclick="sendSimulatedText('one two three')">
+              "one two three"
+            </button>
+            <button class="quick-tag-btn" onclick="sendSimulatedText('124')">
+              "124"
+            </button>
+            <button class="quick-tag-btn" onclick="sendSimulatedText('Arun Prakash')">
+              "Arun Prakash"
+            </button>
+            <button class="quick-tag-btn" onclick="sendSimulatedText('Priya Sharma')">
+              "Priya Sharma"
+            </button>
+            <button class="quick-tag-btn" onclick="sendSimulatedText('my roll number is 101')">
+              "my roll number is 101"
+            </button>
+            <button class="quick-tag-btn" onclick="sendSimulatedText('unknown register 9999')">
+              "unknown register 9999" (Test Not Found)
+            </button>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+            <input type="text" id="simCustomInput" class="input-control" placeholder="Type custom spoken phrase..." style="flex: 1;">
+            <button class="btn btn-primary btn-sm" onclick="const val = document.getElementById('simCustomInput').value; if(val) sendSimulatedText(val);">Test Input</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Today's Live Attendance Feed -->
+    <section class="card" style="margin-top: 2rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+        <div>
+          <h2>Today's Live Check-Ins</h2>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">Verified attendance records stamped in real-time today</p>
+        </div>
+        <a href="/attendance" class="btn btn-outline btn-sm">
+          View Full History <i class="fa-solid fa-arrow-right" style="margin-left: 0.35rem;"></i>
+        </a>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">#</th>
+              <th>Register No</th>
+              <th>Student Name</th>
+              <th>Department</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="todayLiveTableBody">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">
+                Loading live records...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Alerts Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <b>Voice Attendance System</b> • Automatic Speech Recognition (ASR) Project
+      </div>
+      <div>
+        College Submission Ready • Faster-Whisper + Flask + SQLite
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
